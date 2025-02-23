@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { motion } from "framer-motion";
-import { X, Send, Robot, ChatRightText } from "react-bootstrap-icons";
+import { X, Send, Robot, ChatRightText, MicFill } from "react-bootstrap-icons";
 import chatBg from '../assets/back1.jpeg';
 
 const Chatbot = () => {
@@ -13,13 +13,14 @@ const Chatbot = () => {
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState(null);
   const chatRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   // Generate new session ID on page refresh
   useEffect(() => {
     const newSessionId = crypto.randomUUID(); // Generate a new session ID
     setSessionId(newSessionId);
     localStorage.setItem("chatSessionId", newSessionId); // Store new session ID
-  }, []); // Runs only once on page load
+  }, []);
 
   useEffect(() => {
     if (chatRef.current) {
@@ -32,25 +33,49 @@ const Chatbot = () => {
 
     const newMessage = { text: input, sender: "user", timestamp: new Date().toLocaleTimeString() };
     setMessages(prev => [...prev, newMessage]);
-
     setInput("");
 
     try {
-      const response = await axios.post("http://localhost:8000/api/chat", { session_id: sessionId, message: input }, {
+      const response = await axios.post("https://sbi-back-dh35.onrender.com/api/chat", { session_id: sessionId, message: input }, {
         headers: { "Content-Type": "application/json" }
       });
 
-      setMessages(prev => [
-        ...prev,
-        { text: response.data.response || "No response received", sender: "bot", timestamp: new Date().toLocaleTimeString() },
-      ]);
+      const botMessage = { text: response.data.response || "No response received", sender: "bot", timestamp: new Date().toLocaleTimeString() };
+      setMessages(prev => [...prev, botMessage]);
+      speak(botMessage.text);
     } catch (error) {
       console.error("Error:", error);
-      setMessages(prev => [
-        ...prev,
-        { text: "Error connecting to the server.", sender: "bot", timestamp: new Date().toLocaleTimeString() },
-      ]);
+      setMessages(prev => [...prev, { text: "Error connecting to the server.", sender: "bot", timestamp: new Date().toLocaleTimeString() }]);
     }
+  };
+
+  // Text-to-Speech (TTS) for bot messages
+  const speak = (text) => {
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+    synth.speak(utterance);
+  };
+
+  // Speech-to-Text (STT) for user input
+  const startListening = () => {
+    if (!("webkitSpeechRecognition" in window)) {
+      alert("Your browser does not support speech recognition.");
+      return;
+    }
+    
+    // eslint-disable-next-line no-undef
+    recognitionRef.current = new webkitSpeechRecognition();
+    recognitionRef.current.continuous = false;
+    recognitionRef.current.interimResults = false;
+    recognitionRef.current.lang = "en-US";
+
+    recognitionRef.current.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript);
+    };
+
+    recognitionRef.current.start();
   };
 
   return (
@@ -102,45 +127,18 @@ const Chatbot = () => {
 
           <div ref={chatRef} style={{ flexGrow: 1, padding: '0.75rem', overflowY: 'auto', maxHeight: '400px' }}>
             {messages.map((msg, index) => (
-              msg.text.trim() !== "" && ( // Ensuring empty messages are not displayed
-                <motion.div 
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  style={{ display: "flex", justifyContent: msg.sender === "user" ? "flex-end" : "flex-start", marginBottom: "10px" }}
-                >
-                  <div 
-                    style={{ 
-                      maxWidth: "70%",
-                      padding: "10px 15px",
-                      borderRadius: "15px",
-                      fontSize: "14px",
-                      color: msg.sender === "user" ? "#fff" : "#000",
-                      background: msg.sender === "user" ? "#1976D2" : "#e0e0e0",
-                      boxShadow: msg.sender === "bot" ? "0px 0px 10px rgba(0, 0, 0, 0.1)" : "none",
-                      minHeight: "20px", // Ensures minimum height so messages don't disappear
-                    }}
-                  >
-                    {msg.text}
-                    <div style={{ fontSize: "10px", marginTop: "5px", textAlign: "right", opacity: 0.6 }}>{msg.timestamp}</div>
-                  </div>
-                </motion.div>
-              )
+              <motion.div key={index} style={{ display: "flex", justifyContent: msg.sender === "user" ? "flex-end" : "flex-start", marginBottom: "10px" }}>
+                <div style={{ maxWidth: "70%", padding: "10px 15px", borderRadius: "15px", fontSize: "14px", color: msg.sender === "user" ? "#fff" : "#000", background: msg.sender === "user" ? "#1976D2" : "#e0e0e0" }}>
+                  {msg.text}
+                </div>
+              </motion.div>
             ))}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', padding: '0.75rem', background: 'linear-gradient(to right, rgb(104,29,67), rgb(43,21,95))', borderTop: '1px solid #ccc' }}>
-            <input 
-              type="text" 
-              className="form-control bg-light text-dark border-secondary" 
-              value={input} 
-              onChange={(e) => setInput(e.target.value)} 
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} 
-              placeholder="Type a message..." 
-              style={{ flex: 1, borderRadius: "20px", padding: "10px" }} 
-            />
-            <button className="btn btn-outline-warning mx-2" onClick={handleSendMessage}><Send size={16} /></button>
+          <div style={{ display: 'flex', alignItems: 'center', padding: '0.75rem' }}>
+            <button className="btn btn-outline-warning me-2" onClick={startListening}><MicFill size={16} /></button>
+            <input type="text" className="form-control" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} placeholder="Type a message..." />
+            <button className="btn btn-outline-warning ms-2" onClick={handleSendMessage}><Send size={16} /></button>
           </div>
         </motion.div>
       )}
