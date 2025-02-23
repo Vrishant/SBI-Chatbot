@@ -15,11 +15,11 @@ const Chatbot = () => {
   const chatRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  // Generate new session ID on page refresh
+
   useEffect(() => {
-    const newSessionId = crypto.randomUUID(); // Generate a new session ID
+    const newSessionId = crypto.randomUUID();
     setSessionId(newSessionId);
-    localStorage.setItem("chatSessionId", newSessionId); // Store new session ID
+    localStorage.setItem("chatSessionId", newSessionId); 
   }, []);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ const Chatbot = () => {
     }
   };
 
-  // Text-to-Speech (TTS) for bot messages
+
   const speak = (text) => {
     const synth = window.speechSynthesis;
     const utterance = new SpeechSynthesisUtterance(text);
@@ -57,14 +57,14 @@ const Chatbot = () => {
     synth.speak(utterance);
   };
 
-  // Speech-to-Text (STT) for user input
+
   const startListening = () => {
     if (!("webkitSpeechRecognition" in window)) {
       alert("Your browser does not support speech recognition.");
       return;
     }
     
-    // eslint-disable-next-line no-undef
+
     recognitionRef.current = new webkitSpeechRecognition();
     recognitionRef.current.continuous = false;
     recognitionRef.current.interimResults = false;
@@ -112,13 +112,13 @@ const Chatbot = () => {
           color: '#000',
           borderRadius: '12px 12px 12px 12px',
           width: '350px',
-          height: '80vh', // Fixed height
+          height: '80vh',
           display: 'flex',
-          flexDirection: 'column', // Ensure input stays at bottom
+          flexDirection: 'column',
           boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
         }}
       >
-        {/* Header */}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'linear-gradient(to right, rgb(104,29,67), rgb(43,21,95))', color: 'white',borderRadius: '12px 12px 0 0', }}>
           <div className="d-flex align-items-center">
             <Robot size={24} className="me-2" />
@@ -127,7 +127,7 @@ const Chatbot = () => {
           <X style={{ cursor: "pointer" }} onClick={() => setIsOpen(false)} />
         </div>
       
-        {/* Chat Messages Container */}
+
         <div ref={chatRef} style={{ flexGrow: 1, padding: '0.75rem', overflowY: 'auto' }}>
           {messages.map((msg, index) => (
             <motion.div key={index} style={{ display: "flex", justifyContent: msg.sender === "user" ? "flex-end" : "flex-start", marginBottom: "10px" }}>
@@ -138,7 +138,7 @@ const Chatbot = () => {
           ))}
         </div>
       
-        {/* Input Box - Stuck at Bottom */}
+
         <div style={{ display: 'flex', alignItems: 'center', padding: '0.75rem', background: 'linear-gradient(to right, rgb(104,29,67), rgb(43,21,95))', borderTop: '1px solid #ccc' , borderRadius: '0 0 12px 12px'}}>
           <button className="btn btn-outline-warning me-2" onClick={startListening}><MicFill size={16} /></button>
           <input type="text" className="form-control" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} placeholder="Type a message..." />
